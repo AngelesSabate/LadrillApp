@@ -1,0 +1,76 @@
+/* ======================================================
+   ESTILOS GENERALES DE LADRILLAPP
+   ====================================================== */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+}
+
+
+/* Contenedor principal */
+main {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+
+/* Título principal */
+h1 {
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+
+.subtitulo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+
+/* Cada bloque de la aplicación */
+section {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+
+/* Formularios */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* Etiquetas */
+label {
+    margin-top: 12px;
+    margin-bottom: 5px;
+}
+
+
+/* Campos de entrada */
+input,
+select {
+    padding: 10px;
+    font-size: 16px;
+}
+
+
+/* Botones */
+button {
+    margin-top: 20px;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+
+/* Resultado del cálculo */
+#contenidoResultado {
+    line-height: 1.6;
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LadrillApp</title>
+
+    <!-- Conectamos el archivo de estilos -->
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+
+    <main>
+
+        <!-- Título principal de la aplicación -->
+        <h1>LadrillApp</h1>
+
+        <p class="subtitulo">
+            Cómputo de materiales y mano de obra para la construcción
+        </p>
+
+
+        <!-- ============================================= -->
+        <!-- CREAR OBRA -->
+        <!-- ============================================= -->
+
+        <section>
+
+            <h2>Nueva obra</h2>
+
+            <form id="formObra">
+
+                <label for="nombreObra">
+                    Nombre de la obra
+                </label>
+
+                <input
+                    type="text"
+                    id="nombreObra"
+                    required
+                >
+
+
+                <label for="descripcionObra">
+                    Descripción
+                </label>
+
+                <input
+                    type="text"
+                    id="descripcionObra"
+                >
+
+
+                <button type="submit">
+                    Crear obra
+                </button>
+
+            </form>
+
+            <!-- Acá mostraremos el nombre de la obra creada -->
+            <p id="mensajeObra"></p>
+
+        </section>
+
+
+        <!-- ============================================= -->
+        <!-- AGREGAR ELEMENTO -->
+        <!-- ============================================= -->
+
+        <section id="seccionElemento">
+
+            <h2>Agregar elemento constructivo</h2>
+
+            <form id="formElemento">
+
+                <label for="tipoConstructivo">
+                    Tipo constructivo
+                </label>
+
+                <select id="tipoConstructivo" required>
+                </select>
+
+
+                <label for="nombreElemento">
+                    Nombre del elemento
+                </label>
+
+                <input
+                    type="text"
+                    id="nombreElemento"
+                    placeholder="Ej: Pared dormitorio"
+                >
+
+
+                <label for="largo">
+                    Largo (m)
+                </label>
+
+                <input
+                    type="number"
+                    id="largo"
+                    step="0.01"
+                    min="0"
+                    required
+                >
+
+
+                <label id="labelSegundaDimension" for="segundaDimension">
+                    Alto (m)
+                </label>
+
+                <input
+                    type="number"
+                    id="segundaDimension"
+                    step="0.01"
+                    min="0"
+                    required
+                >
+
+
+                <button type="submit">
+                    Calcular y agregar
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- ============================================= -->
+        <!-- RESULTADO -->
+        <!-- ============================================= -->
+
+        <section id="resultado">
+
+            <h2>Resultado</h2>
+
+            <div id="contenidoResultado">
+                Todavía no se realizó ningún cálculo.
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- Conectamos nuestro archivo JavaScript -->
+    <script src="app.js"></script>
+
+</body>
+
+</html>
