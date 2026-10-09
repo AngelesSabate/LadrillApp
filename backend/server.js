@@ -261,24 +261,23 @@ app.post('/elementos', (req, res) => {
 
 // Esta ruta recibe el ID de un elemento ya guardado.
 //
-// Ejemplo:
-// http://localhost:3000/elementos/1/calculo
+// Busca su superficie y tipo constructivo.
+// Luego calcula materiales y mano de obra,
+// separando los resultados por componente:
 //
-// Node.js busca:
-// - la superficie del elemento
-// - el tipo constructivo
-//
-// Después consulta los rendimientos de materiales y mano de obra
-// y calcula las cantidades totales.
+// - Mampostería
+// - Revoque
+// - Contrapiso
+// - Carpeta
+// - Techo
 
 app.get('/elementos/:id/calculo', (req, res) => {
 
-    // Tomamos el ID del elemento desde la URL.
     const idElemento = req.params.id;
 
 
     // -----------------------------------------------------
-    // 1. BUSCAMOS EL ELEMENTO
+    // 1. BUSCAR EL ELEMENTO
     // -----------------------------------------------------
 
     const consultaElemento = `
@@ -307,23 +306,22 @@ app.get('/elementos/:id/calculo', (req, res) => {
             }
 
 
-            // Si no existe ese elemento, devolvemos un mensaje.
             if (elementos.length === 0) {
                 res.status(404).send('Elemento no encontrado');
                 return;
             }
 
 
-            // Como buscamos por ID, usamos el primer resultado.
             const elemento = elementos[0];
 
 
             // -------------------------------------------------
-            // 2. BUSCAMOS LOS MATERIALES
+            // 2. BUSCAR LOS MATERIALES
             // -------------------------------------------------
 
             const consultaMateriales = `
                 SELECT
+                    rm.componente,
                     m.nombre,
                     m.unidad_medida,
                     rm.rendimiento_unitario
@@ -349,28 +347,31 @@ app.get('/elementos/:id/calculo', (req, res) => {
                     // Calculamos la cantidad total de cada material.
                     const materialesCalculados = materiales.map(material => {
 
+                        const cantidadTotal = Number(
+                            (
+                                elemento.superficie *
+                                material.rendimiento_unitario
+                            ).toFixed(3)
+                        );
+
+
                         return {
+                            componente: material.componente,
                             nombre: material.nombre,
                             unidad_medida: material.unidad_medida,
-                            // Calculamos la cantidad y redondeamos a 3 decimales.
-                            // Esto evita resultados como 73.19999999999999.
-                            cantidad_total: Number(
-                                (
-                                    elemento.superficie *
-                                    material.rendimiento_unitario
-                                ).toFixed(3)
-                            )
+                            cantidad_total: cantidadTotal
                         };
 
                     });
 
 
-                    // ---------------------------------------------
-                    // 3. BUSCAMOS LA MANO DE OBRA
-                    // ---------------------------------------------
+                    // -------------------------------------------------
+                    // 3. BUSCAR LA MANO DE OBRA
+                    // -------------------------------------------------
 
                     const consultaManoObra = `
                         SELECT
+                            rmo.componente,
                             mo.nombre,
                             mo.unidad_medida,
                             rmo.horas_por_unidad
@@ -403,26 +404,80 @@ app.get('/elementos/:id/calculo', (req, res) => {
                             // Calculamos las horas totales.
                             const manoObraCalculada = manoObra.map(trabajador => {
 
+                                const horasTotales = Number(
+                                    (
+                                        elemento.superficie *
+                                        trabajador.horas_por_unidad
+                                    ).toFixed(3)
+                                );
+
+
                                 return {
+                                    componente: trabajador.componente,
                                     nombre: trabajador.nombre,
                                     unidad_medida: trabajador.unidad_medida,
-                                    // Calculamos las horas y redondeamos a 3 decimales.
-                                    horas_totales: Number(
-                                        (
-                                            elemento.superficie *
-                                            trabajador.horas_por_unidad
-                                        ).toFixed(3)
-                                    )
+                                    horas_totales: horasTotales
                                 };
 
                             });
 
 
-                            // -----------------------------------------
-                            // 4. DEVOLVEMOS TODO EL RESULTADO
-                            // -----------------------------------------
+                            // -------------------------------------------------
+                            // 4. AGRUPAR LOS RESULTADOS POR COMPONENTE
+                            // -------------------------------------------------
+
+                            const ordenComponentes = [
+                                'Mampostería',
+                                'Revoque',
+                                'Contrapiso',
+                                'Carpeta',
+                                'Techo'
+                            ];
+
+
+                            const componentes = [];
+
+
+                            ordenComponentes.forEach(nombreComponente => {
+
+                                const materialesComponente =
+                                    materialesCalculados.filter(
+                                        material =>
+                                            material.componente === nombreComponente
+                                    );
+
+
+                                const manoObraComponente =
+                                    manoObraCalculada.filter(
+                                        trabajador =>
+                                            trabajador.componente === nombreComponente
+                                    );
+
+
+                                // Solo agregamos el componente
+                                // si realmente tiene datos.
+                                if (
+                                    materialesComponente.length > 0 ||
+                                    manoObraComponente.length > 0
+                                ) {
+
+                                    componentes.push({
+                                        nombre: nombreComponente,
+                                        materiales: materialesComponente,
+                                        mano_obra: manoObraComponente
+                                    });
+
+                                }
+
+                            });
+
+
+                            // -------------------------------------------------
+                            // 5. DEVOLVER EL RESULTADO
+                            // -------------------------------------------------
 
                             res.json({
+
                                 elemento: {
                                     id_elemento: elemento.id_elemento,
                                     nombre: elemento.nombre,
@@ -431,9 +486,8 @@ app.get('/elementos/:id/calculo', (req, res) => {
                                     superficie: elemento.superficie
                                 },
 
-                                materiales: materialesCalculados,
+                                componentes: componentes
 
-                                mano_obra: manoObraCalculada
                             });
 
                         }
@@ -448,11 +502,666 @@ app.get('/elementos/:id/calculo', (req, res) => {
 });
 
 // =========================================================
+// OBTENER LOS ELEMENTOS DE UNA OBRA
+// =========================================================
+
+// Esta ruta devuelve todos los elementos cargados
+// dentro de una obra determinada.
+//
+// Ejemplo:
+// GET http://localhost:3000/obras/1/elementos
+
+app.get('/obras/:id/elementos', (req, res) => {
+
+    // Tomamos el ID de la obra desde la dirección.
+    const idObra = req.params.id;
+
+
+    // Buscamos los elementos de esa obra
+    // y también el nombre de su tipo constructivo.
+    const consulta = `
+        SELECT
+            e.id_elemento,
+            e.nombre,
+            e.largo,
+            e.segunda_dimension,
+            e.superficie,
+            tc.nombre AS tipo_constructivo,
+            tc.rubro
+        FROM elementos_obra e
+
+        INNER JOIN tipos_constructivos tc
+            ON e.id_tipo = tc.id_tipo
+
+        WHERE e.id_obra = ?
+
+        ORDER BY e.id_elemento
+    `;
+
+
+    conexion.query(
+        consulta,
+        [idObra],
+        (error, resultados) => {
+
+            if (error) {
+                console.error(
+                    'Error al buscar los elementos:',
+                    error
+                );
+
+                res.status(500).send(
+                    'Error al buscar los elementos de la obra'
+                );
+
+                return;
+            }
+
+
+            // Devolvemos los elementos encontrados.
+            res.json(resultados);
+
+        }
+    );
+
+});
+
+// =========================================================
+// TOTALES DE UNA OBRA
+// =========================================================
+
+// Esta ruta calcula:
+//
+// 1. Totales del rubro Paredes.
+// 2. Totales del rubro Techo.
+// 3. Totales del rubro Piso.
+// 4. Totales generales de toda la obra.
+//
+// Aunque Piso y Techo se cargan juntos,
+// acá los mostramos por separado.
+
+app.get('/obras/:id/totales', (req, res) => {
+
+    const idObra = req.params.id;
+
+
+    // =====================================================
+    // 1. MATERIALES AGRUPADOS POR RUBRO
+    // =====================================================
+
+    const consultaMaterialesPorRubro = `
+        SELECT
+
+            CASE
+                WHEN rm.componente IN ('Mampostería', 'Revoque')
+                    THEN 'Paredes'
+
+                WHEN rm.componente = 'Techo'
+                    THEN 'Techo'
+
+                WHEN rm.componente IN ('Contrapiso', 'Carpeta')
+                    THEN 'Piso'
+
+                ELSE rm.componente
+            END AS rubro,
+
+            m.nombre,
+            m.unidad_medida,
+
+            ROUND(
+                SUM(
+                    e.superficie *
+                    rm.rendimiento_unitario
+                ),
+                3
+            ) AS cantidad_total
+
+        FROM elementos_obra e
+
+        INNER JOIN requerimientos_material rm
+            ON e.id_tipo = rm.id_tipo
+
+        INNER JOIN materiales m
+            ON rm.id_material = m.id_material
+
+        WHERE e.id_obra = ?
+
+        GROUP BY
+            rubro,
+            m.id_material,
+            m.nombre,
+            m.unidad_medida
+
+        ORDER BY rubro, m.nombre
+    `;
+
+
+    conexion.query(
+        consultaMaterialesPorRubro,
+        [idObra],
+        (error, materialesPorRubro) => {
+
+            if (error) {
+
+                console.error(
+                    'Error al calcular materiales por rubro:',
+                    error
+                );
+
+                res.status(500).send(
+                    'Error al calcular materiales por rubro'
+                );
+
+                return;
+            }
+
+
+            // =================================================
+            // 2. MANO DE OBRA AGRUPADA POR RUBRO
+            // =================================================
+
+            const consultaManoObraPorRubro = `
+                SELECT
+
+                    CASE
+                        WHEN rmo.componente IN ('Mampostería', 'Revoque')
+                            THEN 'Paredes'
+
+                        WHEN rmo.componente = 'Techo'
+                            THEN 'Techo'
+
+                        WHEN rmo.componente IN ('Contrapiso', 'Carpeta')
+                            THEN 'Piso'
+
+                        ELSE rmo.componente
+                    END AS rubro,
+
+                    mo.nombre,
+                    mo.unidad_medida,
+
+                    ROUND(
+                        SUM(
+                            e.superficie *
+                            rmo.horas_por_unidad
+                        ),
+                        3
+                    ) AS horas_totales
+
+                FROM elementos_obra e
+
+                INNER JOIN requerimientos_mano_obra rmo
+                    ON e.id_tipo = rmo.id_tipo
+
+                INNER JOIN mano_obra mo
+                    ON rmo.id_mano_obra = mo.id_mano_obra
+
+                WHERE e.id_obra = ?
+
+                GROUP BY
+                    rubro,
+                    mo.id_mano_obra,
+                    mo.nombre,
+                    mo.unidad_medida
+
+                ORDER BY rubro, mo.nombre
+            `;
+
+
+            conexion.query(
+                consultaManoObraPorRubro,
+                [idObra],
+                (error, manoObraPorRubro) => {
+
+                    if (error) {
+
+                        console.error(
+                            'Error al calcular mano de obra por rubro:',
+                            error
+                        );
+
+                        res.status(500).send(
+                            'Error al calcular mano de obra por rubro'
+                        );
+
+                        return;
+                    }
+
+
+                    // =================================================
+                    // 3. MATERIALES TOTALES DE TODA LA OBRA
+                    // =================================================
+
+                    const consultaMaterialesTotales = `
+                        SELECT
+                            m.nombre,
+                            m.unidad_medida,
+
+                            ROUND(
+                                SUM(
+                                    e.superficie *
+                                    rm.rendimiento_unitario
+                                ),
+                                3
+                            ) AS cantidad_total
+
+                        FROM elementos_obra e
+
+                        INNER JOIN requerimientos_material rm
+                            ON e.id_tipo = rm.id_tipo
+
+                        INNER JOIN materiales m
+                            ON rm.id_material = m.id_material
+
+                        WHERE e.id_obra = ?
+
+                        GROUP BY
+                            m.id_material,
+                            m.nombre,
+                            m.unidad_medida
+
+                        ORDER BY m.nombre
+                    `;
+
+
+                    conexion.query(
+                        consultaMaterialesTotales,
+                        [idObra],
+                        (error, materialesTotales) => {
+
+                            if (error) {
+
+                                console.error(
+                                    'Error al calcular materiales totales:',
+                                    error
+                                );
+
+                                res.status(500).send(
+                                    'Error al calcular materiales totales'
+                                );
+
+                                return;
+                            }
+
+
+                            // =============================================
+                            // 4. MANO DE OBRA TOTAL DE TODA LA OBRA
+                            // =============================================
+
+                            const consultaManoObraTotal = `
+                                SELECT
+                                    mo.nombre,
+                                    mo.unidad_medida,
+
+                                    ROUND(
+                                        SUM(
+                                            e.superficie *
+                                            rmo.horas_por_unidad
+                                        ),
+                                        3
+                                    ) AS horas_totales
+
+                                FROM elementos_obra e
+
+                                INNER JOIN requerimientos_mano_obra rmo
+                                    ON e.id_tipo = rmo.id_tipo
+
+                                INNER JOIN mano_obra mo
+                                    ON rmo.id_mano_obra = mo.id_mano_obra
+
+                                WHERE e.id_obra = ?
+
+                                GROUP BY
+                                    mo.id_mano_obra,
+                                    mo.nombre,
+                                    mo.unidad_medida
+
+                                ORDER BY mo.nombre
+                            `;
+
+
+                            conexion.query(
+                                consultaManoObraTotal,
+                                [idObra],
+                                (error, manoObraTotal) => {
+
+                                    if (error) {
+
+                                        console.error(
+                                            'Error al calcular mano de obra total:',
+                                            error
+                                        );
+
+                                        res.status(500).send(
+                                            'Error al calcular mano de obra total'
+                                        );
+
+                                        return;
+                                    }
+
+
+                                    // =====================================
+                                    // 5. ARMAR LOS RUBROS
+                                    // =====================================
+
+                                    const nombresRubros = [
+                                        'Paredes',
+                                        'Techo',
+                                        'Piso'
+                                    ];
+
+
+                                    const rubros = nombresRubros.map(
+                                        nombreRubro => {
+
+                                            const materiales =
+                                                materialesPorRubro
+                                                    .filter(
+                                                        material =>
+                                                            material.rubro ===
+                                                            nombreRubro
+                                                    )
+                                                    .map(
+                                                        material => ({
+                                                            nombre:
+                                                                material.nombre,
+
+                                                            unidad_medida:
+                                                                material.unidad_medida,
+
+                                                            cantidad_total:
+                                                                Number(
+                                                                    material.cantidad_total
+                                                                )
+                                                        })
+                                                    );
+
+
+                                            const manoObra =
+                                                manoObraPorRubro
+                                                    .filter(
+                                                        trabajador =>
+                                                            trabajador.rubro ===
+                                                            nombreRubro
+                                                    )
+                                                    .map(
+                                                        trabajador => ({
+                                                            nombre:
+                                                                trabajador.nombre,
+
+                                                            unidad_medida:
+                                                                trabajador.unidad_medida,
+
+                                                            horas_totales:
+                                                                Number(
+                                                                    trabajador.horas_totales
+                                                                )
+                                                        })
+                                                    );
+
+
+                                            return {
+                                                nombre: nombreRubro,
+                                                materiales: materiales,
+                                                mano_obra: manoObra
+                                            };
+
+                                        }
+                                    );
+
+
+                                    // =====================================
+                                    // 6. RESPUESTA FINAL
+                                    // =====================================
+
+                                    res.json({
+
+                                        rubros: rubros,
+
+                                        materiales:
+                                            materialesTotales.map(
+                                                material => ({
+                                                    nombre:
+                                                        material.nombre,
+
+                                                    unidad_medida:
+                                                        material.unidad_medida,
+
+                                                    cantidad_total:
+                                                        Number(
+                                                            material.cantidad_total
+                                                        )
+                                                })
+                                            ),
+
+                                        mano_obra:
+                                            manoObraTotal.map(
+                                                trabajador => ({
+                                                    nombre:
+                                                        trabajador.nombre,
+
+                                                    unidad_medida:
+                                                        trabajador.unidad_medida,
+
+                                                    horas_totales:
+                                                        Number(
+                                                            trabajador.horas_totales
+                                                        )
+                                                })
+                                            )
+
+                                    });
+
+                                }
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+        }
+    );
+
+});
+
+// =========================================================
+// LISTAR TODAS LAS OBRAS
+// =========================================================
+
+// Devuelve todas las obras guardadas en MySQL.
+// Se muestran primero las más nuevas.
+
+app.get('/obras', (req, res) => {
+
+    const consulta = `
+        SELECT
+            id_obra,
+            nombre,
+            descripcion,
+            fecha_creacion
+        FROM obras
+        ORDER BY id_obra DESC
+    `;
+
+
+    conexion.query(
+        consulta,
+        (error, obras) => {
+
+            if (error) {
+
+                console.error(
+                    'Error al obtener las obras:',
+                    error
+                );
+
+                res.status(500).send(
+                    'Error al obtener las obras'
+                );
+
+                return;
+            }
+
+
+            res.json(obras);
+
+        }
+    );
+
+});
+
+// =========================================================
+// EDITAR UN ELEMENTO
+// =========================================================
+
+// Permite modificar las dimensiones de un elemento.
+// Después recalculamos la superficie.
+
+app.put('/elementos/:id', (req, res) => {
+
+    const idElemento = req.params.id;
+
+    const {
+        nombre,
+        largo,
+        segunda_dimension
+    } = req.body;
+
+
+    const superficie =
+        Number(largo) *
+        Number(segunda_dimension);
+
+
+    const consulta = `
+        UPDATE elementos_obra
+        SET
+            nombre = ?,
+            largo = ?,
+            segunda_dimension = ?,
+            superficie = ?
+        WHERE id_elemento = ?
+    `;
+
+
+    conexion.query(
+        consulta,
+        [
+            nombre,
+            largo,
+            segunda_dimension,
+            superficie,
+            idElemento
+        ],
+        (error, resultado) => {
+
+            if (error) {
+
+                console.error(
+                    'Error al editar el elemento:',
+                    error
+                );
+
+                res.status(500).send(
+                    'Error al editar el elemento'
+                );
+
+                return;
+            }
+
+
+            res.json({
+                mensaje: 'Elemento actualizado correctamente',
+                id_elemento: Number(idElemento),
+                superficie: Number(superficie.toFixed(2))
+            });
+
+        }
+    );
+
+});
+
+// =========================================================
+// ELIMINAR UNA OBRA
+// =========================================================
+
+// Primero eliminamos los elementos que pertenecen a la obra.
+// Después eliminamos la obra.
+
+app.delete('/obras/:id', (req, res) => {
+
+    const idObra = req.params.id;
+
+
+    const eliminarElementos = `
+        DELETE FROM elementos_obra
+        WHERE id_obra = ?
+    `;
+
+
+    conexion.query(
+        eliminarElementos,
+        [idObra],
+        (error) => {
+
+            if (error) {
+
+                console.error(
+                    'Error al eliminar los elementos de la obra:',
+                    error
+                );
+
+                res.status(500).send(
+                    'Error al eliminar los elementos de la obra'
+                );
+
+                return;
+            }
+
+
+            const eliminarObra = `
+                DELETE FROM obras
+                WHERE id_obra = ?
+            `;
+
+
+            conexion.query(
+                eliminarObra,
+                [idObra],
+                (error, resultado) => {
+
+                    if (error) {
+
+                        console.error(
+                            'Error al eliminar la obra:',
+                            error
+                        );
+
+                        res.status(500).send(
+                            'Error al eliminar la obra'
+                        );
+
+                        return;
+                    }
+
+
+                    res.json({
+                        mensaje: 'Obra eliminada correctamente'
+                    });
+
+                }
+            );
+
+        }
+    );
+
+});
+
+// =========================================================
 // INICIAR EL SERVIDOR
 // =========================================================
 
 app.listen(PORT, () => {
-
     console.log(`Servidor funcionando en http://localhost:${PORT}`);
-
 });
