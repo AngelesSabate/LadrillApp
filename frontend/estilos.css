@@ -1,10 +1,8 @@
-/* ======================================================
-   ESTILOS GENERALES DE LADRILLAPP
-   ====================================================== */
 
+/*Estilo general de la pagina*/
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    background-color: #292929;
     margin: 0;
 }
 
@@ -17,22 +15,48 @@ main {
 }
 
 
-/* Título principal */
-h1 {
-    text-align: center;
-    margin-bottom: 5px;
+/* Header */
+
+header {
+    position: sticky;
+    display: flex;
+    top: 0;
+    overflow: hidden;
+    background-color: #E9E2AF;
+    padding: 20px 10px;
+    align-items: center;
+    justify-content: center;
+    height: 80px;
 }
 
+header a {
 
-.subtitulo {
+    float: left;
+    color: black;
     text-align: center;
-    margin-bottom: 30px;
+    padding: 12px;
+    text-decoration: none;
+    font-size: 25px;
+    line-height: 25px;
+    border-radius: 4px;
 }
 
+header img {
+    width: 7%;
+}
+
+.header-derecha{
+    float: right;
+}
+
+header a:hover {
+    background-color: #FFFCE4;
+    color: black;
+}
 
 /* Cada bloque de la aplicación */
 section {
-    background-color: white;
+    background-color: #E9E2AF;
     padding: 20px;
     margin-bottom: 20px;
     border-radius: 8px;
@@ -58,15 +82,35 @@ input,
 select {
     padding: 10px;
     font-size: 16px;
+    border-radius: 20px;
+    outline: none;
+    background: #FFFCE4;
+    color: #4E3E2B;
+    border: none;
+    font-weight: bold;
 }
+
 
 
 /* Botones */
 button {
+    border-radius: 20px;
     margin-top: 20px;
     padding: 12px;
-    font-size: 16px;
+    outline: none;
+    text-align: center;
+    background: #C93407;
+    color: white;
+    letter-spacing: 1px;
+    text-shadow: 0;
+    font-weight: bold;
+    border: none;
     cursor: pointer;
+    transition: all 0.25s ease;
+    &:hover {
+        color: white;
+        background: #da7334;
+    }
 }
 
 
@@ -75,12 +119,10 @@ button {
     line-height: 1.6;
 }
 
-/* ======================================================
-   ELEMENTOS DE LA OBRA
-   ====================================================== */
 
+/* Elementos de la obra */
 .elemento-obra {
-    border-top: 1px solid #cccccc;
+    border-top: 1px solid #4E3E2B;
     padding: 10px 0;
 }
 
@@ -95,3 +137,14 @@ button {
 .elemento-obra p {
     margin: 5px 0;
 }
+
+/* Footer */
+
+footer {
+    text-align: center;
+    padding: 3px;
+    background-color: #E9E2AF;
+    color:black;
+    font-weight: bold;
+}
+

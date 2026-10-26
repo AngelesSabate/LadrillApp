@@ -1,21 +1,17 @@
-// =========================================================
-// LADRILLAPP - FRONTEND
-// =========================================================
 
-// Guardaremos acá el ID de la obra que cree el usuario.
+// guarda id que crea el usuario
 let idObraActual = null;
 
 
-// Guardamos los tipos constructivos que vienen de MySQL.
+// guarda los elementos constructivos que vienen de MySQL.
 let tiposConstructivos = [];
 
 
-// =========================================================
-// CARGAR LOS TIPOS CONSTRUCTIVOS
-// =========================================================
+// ===========================
+// CARGAR TIPOS CONSTRUCTIVOS
+// ===========================
 
-// Esta función consulta al backend para obtener
-// los tipos constructivos almacenados en MySQL.
+// funcion que consulta al backend para obtener los elementos constructivos almacenados en MySQL.
 
 async function cargarTiposConstructivos() {
 
@@ -28,8 +24,7 @@ async function cargarTiposConstructivos() {
     );
 
 
-    // Creamos una opción dentro del selector
-    // por cada tipo constructivo existente.
+    // crea una opción dentro del selector por cada elemento de construccion existente.
     tiposConstructivos.forEach(tipo => {
 
         const opcion = document.createElement('option');
@@ -46,30 +41,27 @@ async function cargarTiposConstructivos() {
 }
 
 
-// Ejecutamos la función cuando se abre LadrillApp.
+// ejecuta la función cuando se abre LadrillApp.
 cargarTiposConstructivos();
 cargarObrasGuardadas();
 
 
-// =========================================================
+// ===============
 // CREAR UNA OBRA
-// =========================================================
+// ===============
 
 document.getElementById('formObra')
     .addEventListener('submit', async (evento) => {
 
-        // Evita que el formulario recargue la página.
+        //evita que se recarge la pagina con el formulario
         evento.preventDefault();
 
 
-        const nombre =
-            document.getElementById('nombreObra').value;
+        const nombre = document.getElementById('nombreObra').value;
 
-        const descripcion =
-            document.getElementById('descripcionObra').value;
+        const descripcion = document.getElementById('descripcionObra').value;
 
 
-// Obtenemos la fecha local actual.
 
 const hoy = new Date();
 
@@ -103,7 +95,7 @@ const fecha =
         const resultado = await respuesta.json();
 
 
-        // Guardamos el ID de la obra creada.
+        
         idObraActual = resultado.id_obra;
 
 
@@ -111,9 +103,7 @@ const fecha =
             .textContent =
             `Obra creada correctamente. ID: ${idObraActual}`;
 
-            // Cuando se crea una nueva obra,
-            // mostramos su lista de elementos.
-            // Al principio estará vacía.
+            // al crear obra nueva muestra sus elementos
             cargarElementosObra();
             cargarTotalesObra();
             cargarObrasGuardadas();
@@ -121,12 +111,12 @@ const fecha =
     });
 
 
-// =========================================================
+// ===========================
 // CAMBIAR "ALTO" O "ANCHO"
-// =========================================================
+// ==========================
 
-// Para paredes necesitamos largo x alto.
-// Para piso y techo necesitamos largo x ancho.
+// largo x alto para paredes
+// largo x ancho para techos y pisos
 
 function cambiarNombreDimension() {
 
@@ -134,16 +124,13 @@ function cambiarNombreDimension() {
         document.getElementById('tipoConstructivo').value
     );
 
-
     const tipo = tiposConstructivos.find(
         tipo => tipo.id_tipo === idTipo
     );
 
-
     if (!tipo) {
         return;
     }
-
 
     const etiqueta = document.getElementById(
         'labelSegundaDimension'
@@ -162,9 +149,7 @@ if (tipo.rubro === 'Pisos y techos') {
 
 }
 
-
-// Cada vez que cambia el tipo constructivo,
-// revisamos si corresponde mostrar Alto o Ancho.
+// revisa si el cambio largo o ancho es correcto
 
 document.getElementById('tipoConstructivo')
     .addEventListener(
@@ -173,9 +158,9 @@ document.getElementById('tipoConstructivo')
     );
 
 
-// =========================================================
+// =================
 // AGREGAR ELEMENTO
-// =========================================================
+// ==================
 
 document.getElementById('formElemento')
     .addEventListener('submit', async (evento) => {
@@ -183,7 +168,7 @@ document.getElementById('formElemento')
         evento.preventDefault();
 
 
-        // Antes de agregar un elemento debe existir una obra.
+        // ver si existe obra
         if (idObraActual === null) {
 
             alert('Primero tenés que crear una obra.');
@@ -217,7 +202,7 @@ document.getElementById('formElemento')
         );
 
 
-        // Guardamos el elemento en MySQL.
+        // guarda el elemento en MySQL.
         const respuesta = await fetch('/elementos', {
 
             method: 'POST',
@@ -242,8 +227,7 @@ document.getElementById('formElemento')
 await respuesta.json();
 
 
-// Actualizamos todos los elementos de la obra
-// y los totales generales.
+// actualiza todos los elementos de obra y totales
 
 await cargarElementosObra();
 await cargarTotalesObra();
@@ -253,14 +237,13 @@ await cargarTotalesObra();
 
 
 
-// =========================================================
+// ======================================
 // MOSTRAR TODOS LOS ELEMENTOS DE LA OBRA
-// =========================================================
+// =======================================
 
 async function cargarElementosObra() {
 
-    // Si todavía no hay una obra seleccionada,
-    // no hacemos ninguna consulta.
+    // Si todavía no hay una obra seleccionada, no hace ninguna consulta.
     if (!idObraActual) {
         return;
     }
@@ -309,10 +292,8 @@ const calculos = await Promise.all(
             await respuestaCalculo.json();
 
 
-        // Guardamos juntos:
-        // - el cálculo
-        // - los datos originales del elemento
-        // Esto nos permitirá editar sus medidas.
+        // guarda el calculo y los datos originales
+        // para luego editar sus medidas
         return {
             calculo: calculo,
             datos: elemento
@@ -366,7 +347,7 @@ const calculos = await Promise.all(
             `;
 
 
-            // Recorremos los componentes del elemento.
+            // recorre componentes de elementos
             calculo.componentes.forEach(componente => {
 
                 html += `
@@ -380,7 +361,7 @@ const calculos = await Promise.all(
                 `;
 
 
-                // Materiales.
+                // recorre materiales
                 componente.materiales.forEach(material => {
 
                     html += `
@@ -405,7 +386,7 @@ const calculos = await Promise.all(
                 `;
 
 
-                // Mano de obra.
+                // recorre mano de obra
                 componente.mano_obra.forEach(trabajador => {
 
                     html += `
@@ -426,7 +407,7 @@ const calculos = await Promise.all(
             });
 
 
-            // Línea para separar un elemento del siguiente.
+            // Línea para separar un elemento del siguiente
             html += `
                     <hr>
                 </div>
@@ -437,7 +418,7 @@ const calculos = await Promise.all(
 
         listaElementos.innerHTML = html;
 
-        // -------------------------------------------------
+// -------------------------------------------------
 // 4. BOTONES PARA EDITAR ELEMENTOS
 // -------------------------------------------------
 
@@ -467,13 +448,13 @@ botonesEditar.forEach(boton => {
                 boton.dataset.rubro;
 
 
-            // Pedimos el nuevo nombre.
+           
             const nuevoNombre = prompt(
                 'Nombre del elemento:',
                 nombreActual
             );
 
-            // Si presiona Cancelar, no modificamos nada.
+            // al cancelar no cambiar nada
             if (nuevoNombre === null) {
                 return;
             }
@@ -572,14 +553,13 @@ botonesEditar.forEach(boton => {
 
 }
 
-// =========================================================
+// ===============================
 // MOSTRAR LOS TOTALES DE LA OBRA
-// =========================================================
+// ===============================
 
 async function cargarTotalesObra() {
 
-    // Si todavía no hay una obra seleccionada,
-    // no hacemos nada.
+    // si no hay obra seleccionada no hacer nada
     if (!idObraActual) {
         return;
     }
@@ -604,14 +584,13 @@ async function cargarTotalesObra() {
         `;
 
 
-        // =================================================
+        // ========================
         // 1. MOSTRAR CADA RUBRO
-        // =================================================
+        // =======================
 
         totales.rubros.forEach(rubro => {
 
-            // Si el rubro no tiene datos,
-            // no lo mostramos.
+            // no mostrar rubro si no tiene datos
             if (
                 rubro.materiales.length === 0 &&
                 rubro.mano_obra.length === 0
@@ -679,9 +658,9 @@ async function cargarTotalesObra() {
         });
 
 
-        // =================================================
+        // ============================
         // 2. MOSTRAR EL TOTAL GENERAL
-        // =================================================
+        // ============================
 
         html += `
             <hr>
@@ -754,17 +733,15 @@ async function cargarTotalesObra() {
 
 }
 
-// =========================================================
+// ========================
 // MOSTRAR OBRAS GUARDADAS
-// =========================================================
+// ========================
 
-// Esta función obtiene de MySQL todas las obras
-// que fueron creadas anteriormente.
+// obtiene todas las obras creadas anteriormente de mysql
 
 async function cargarObrasGuardadas() {
 
-    const contenedor =
-        document.getElementById('listaObras');
+    const contenedor = document.getElementById('listaObras');
 
 
     try {
@@ -826,9 +803,8 @@ async function cargarObrasGuardadas() {
         contenedor.innerHTML = html;
 
 
-        // Agregamos el evento a cada botón "Abrir".
-        const botones =
-            document.querySelectorAll('.botonAbrirObra');
+        // Agrega el evento a cada botón "Abrir".
+        const botones = document.querySelectorAll('.botonAbrirObra');
 
 
         botones.forEach(boton => {
@@ -847,9 +823,8 @@ async function cargarObrasGuardadas() {
 
         });
 
-        // Agregamos el evento a cada botón "Eliminar".
-const botonesEliminar =
-    document.querySelectorAll('.botonEliminarObra');
+        // Agrega el evento a cada botón "Eliminar".
+const botonesEliminar = document.querySelectorAll('.botonEliminarObra');
 
 
 botonesEliminar.forEach(boton => {
@@ -890,8 +865,7 @@ botonesEliminar.forEach(boton => {
             }
 
 
-            // Si eliminamos la obra que estaba abierta,
-            // dejamos de tener una obra seleccionada.
+            // al eliminar la obra abierta, deja de tener obra seleccionada
             if (idObraActual === idObra) {
 
                 idObraActual = null;
@@ -937,12 +911,9 @@ botonesEliminar.forEach(boton => {
 }
 
 
-// =========================================================
+// ========================
 // ABRIR UNA OBRA GUARDADA
-// =========================================================
-
-// Cambiamos la obra actual por la que eligió el usuario
-// y volvemos a cargar sus elementos y sus totales.
+// ========================
 
 async function abrirObra(idObra) {
 
