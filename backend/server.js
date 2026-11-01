@@ -136,37 +136,57 @@ app.post('/obras', (req, res) => {
     // Extraemos los datos enviados desde el navegador o desde una herramienta de prueba.
     const { nombre, descripcion, fecha_creacion } = req.body;
 
-    // Consulta SQL para insertar una nueva obra.
-    const consulta = `
-        INSERT INTO obras (nombre, descripcion, fecha_creacion)
-        VALUES (?, ?, ?)
-    `;
+    // verificar si ya existe una obra con el mismo nombre, 
+    // ? seria el nombre recibido del formulario
+    const consultaVerificacion = 'SELECT id_obra FROM obras WHERE nombre = ?';
 
-    // Ejecutamos la consulta enviando los valores por separado.
-    // Los signos ? se reemplazan por estos valores.
-    conexion.query(
-        consulta,
-        [nombre, descripcion, fecha_creacion],
-        (error, resultado) => {
-
-            // Si ocurre un error al guardar la obra, lo informamos.
-            if (error) {
-                console.error('Error al crear la obra:', error);
-                res.status(500).send('Error al crear la obra');
-                return;
-            }
-
-            // Si salió bien, devolvemos un mensaje junto con
-            // el ID que MySQL generó automáticamente.
-            res.json({
-                mensaje: 'Obra creada correctamente',
-                id_obra: resultado.insertId
-            });
-
+    conexion.query(consultaVerificacion, [nombre], (error, resultados) => {
+        if (error) {
+            console.error('Error al verificar la obra', error);
+            return res.status(500).json({ error: 'Error interno al verificar la obra'});
         }
-    );
 
+        // si la consulta devuelve registros significa que encontro un nombre que ya existe
+        if(resultados.length > 0){
+            return res.status(400).json({ error: 'El nombre de la obra ya existe, eliga otro'})
+        }
+
+
+        // Consulta SQL para insertar una nueva obra.
+        const consulta = `
+            INSERT INTO obras (nombre, descripcion, fecha_creacion)
+            VALUES (?, ?, ?)
+        `;
+    
+        // Ejecutamos la consulta enviando los valores por separado.
+        // Los signos ? se reemplazan por estos valores.
+        conexion.query(
+            consulta,
+            [nombre, descripcion, fecha_creacion],
+            (error, resultado) => {
+
+                // Si ocurre un error al guardar la obra, lo informamos.
+                if (error) {
+                    console.error('Error al crear la obra:', error);
+                    res.status(500).send('Error al crear la obra');
+                    return;
+                }
+
+                // Si salió bien, devolvemos un mensaje junto con
+                // el ID que MySQL generó automáticamente.
+                res.json({
+                    mensaje: 'Obra creada correctamente',
+                    id_obra: resultado.insertId
+                });
+
+            }
+        );
+
+    });
 });
+
+
+    
 
 // =========================================================
 // AGREGAR UN ELEMENTO A UNA OBRA

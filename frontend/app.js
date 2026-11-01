@@ -58,13 +58,14 @@ document.getElementById('formObra')
 
 
         const nombre = document.getElementById('nombreObra').value;
-
         const descripcion = document.getElementById('descripcionObra').value;
 
+        const elementoMensaje = document.getElementById('mensajeObra');
+
+        elementoMensaje.textContent = '';
 
 
 const hoy = new Date();
-
 const fecha =
     hoy.getFullYear() +
     '-' +
@@ -73,8 +74,8 @@ const fecha =
     String(hoy.getDate()).padStart(2, '0');
     
 
-
-        // Enviamos los datos al backend.
+try {
+    // Enviamos los datos al backend.
         const respuesta = await fetch('/obras', {
 
             method: 'POST',
@@ -91,25 +92,28 @@ const fecha =
 
         });
 
-
         const resultado = await respuesta.json();
 
+        if (!respuesta.ok || resultado.error){
+            elementoMensaje.textContent = resultado.error || 'El nombre de la obra ya existe';
+            return;
+        }
 
-        
         idObraActual = resultado.id_obra;
 
+        elementoMensaje.textContent = 'Obra creada correctamente.';
 
-        document.getElementById('mensajeObra')
-            .textContent =
-            `Obra creada correctamente. ID: ${idObraActual}`;
+        cargarElementosObra();
+        cargarTotalesObra();
+        cargarObrasGuardadas();
 
-            // al crear obra nueva muestra sus elementos
-            cargarElementosObra();
-            cargarTotalesObra();
-            cargarObrasGuardadas();
+    } catch (error) {
+        console.error('Error de servidor', error);
+        elementoMensaje.textContent = 'Hubo un error al conectar con el servidor'
+    }
 
-    });
-
+});
+        
 
 // ===========================
 // CAMBIAR "ALTO" O "ANCHO"
@@ -741,194 +745,103 @@ async function cargarTotalesObra() {
 
 async function cargarObrasGuardadas() {
 
-    const contenedor = document.getElementById('listaObras');
-
+    const selectObras = document.getElementById('selectObras');
 
     try {
 
         const respuesta = await fetch('/obras');
-
         const obras = await respuesta.json();
+
+        let htmlOpciones = '<option value="">Seleccione una obra</option>';
 
 
         if (obras.length === 0) {
-
-            contenedor.innerHTML =
-                '<p>No hay obras guardadas.</p>';
-
+            listaObras.innerHTML =
+                '<option value="">No hay obras guardadas</option>';
             return;
         }
 
-
-        let html = '';
-
-
         obras.forEach(obra => {
 
-            html += `
-                <div class="obra-guardada">
-
-                    <strong>
-                        ${obra.nombre}
-                    </strong>
-
-                    <span>
-                        — ID ${obra.id_obra}
-                    </span>
-
-                    <button
-                        type="button"
-                        class="botonAbrirObra"
-                        data-id="${obra.id_obra}"
-                    >
-                        Abrir
-                    </button>
-
-                    
-
-                    <button
-                    type="button"
-                    class="botonEliminarObra"
-                    data-id="${obra.id_obra}"
-                >
-                    Eliminar
-                    </button>
-
-                </div>
+            htmlOpciones += `
+                <option value="${obra.id_obra}">${obra.nombre}</option>  
             `;
-
         });
 
 
-        contenedor.innerHTML = html;
-
-
-        // Agrega el evento a cada botón "Abrir".
-        const botones = document.querySelectorAll('.botonAbrirObra');
-
-
-        botones.forEach(boton => {
-
-            boton.addEventListener(
-                'click',
-                async () => {
-
-                    const idObra =
-                        Number(boton.dataset.id);
-
-                    await abrirObra(idObra);
-
-                }
-            );
-
-        });
-
-        // Agrega el evento a cada botón "Eliminar".
-const botonesEliminar = document.querySelectorAll('.botonEliminarObra');
-
-
-botonesEliminar.forEach(boton => {
-
-    boton.addEventListener(
-        'click',
-        async () => {
-
-            const idObra =
-                Number(boton.dataset.id);
-
-
-            const confirmar = confirm(
-                '¿Seguro que querés eliminar esta obra?'
-            );
-
-
-            if (!confirmar) {
-                return;
-            }
-
-
-            const respuesta = await fetch(
-                `/obras/${idObra}`,
-                {
-                    method: 'DELETE'
-                }
-            );
-
-
-            if (!respuesta.ok) {
-
-                alert(
-                    'No se pudo eliminar la obra.'
-                );
-
-                return;
-            }
-
-
-            // al eliminar la obra abierta, deja de tener obra seleccionada
-            if (idObraActual === idObra) {
-
-                idObraActual = null;
-
-                document.getElementById(
-                    'listaElementos'
-                ).innerHTML = '';
-
-                document.getElementById(
-                    'contenidoTotales'
-                ).innerHTML = '';
-
-                document.getElementById(
-                    'mensajeObra'
-                ).textContent = '';
-            }
-
-
-            await cargarObrasGuardadas();
-
-
-            alert(
-                'Obra eliminada correctamente.'
-            );
-
-        }
-    );
-
-});
-
+        selectObras.innerHTML = htmlOpciones;
 
     } catch (error) {
-
-        console.error(
-            'Error al cargar las obras:',
-            error
-        );
-
-        contenedor.innerHTML =
-            '<p>Error al cargar las obras guardadas.</p>';
+        console.error('Error al cargar las obras:', error);
+        listaObras.innerHTML = '<option value="">Error al cargar las obras</option>'
     }
-
 }
 
+        // Agrega boton "abrir" a la obra seleccionada en el select
+document.getElementById('botonAbrirObra').addEventListener('click', async () => {
+    
+    const selectObras = document.getElementById('selectObras');
+    const idObra = Number(selectObras.value);
+
+    if(!idObra){
+        alert('Por favor, seleccione una obra de la lista');
+        return;
+    }
+
+    await abrirObra(idObra);
+})
+
+        // Agrega boton "eliminar" a la obra seleccionada en el select
+document.getElementById('botonEliminarObra').addEventListener('click', async () => {
+    
+    const selectObras = document.getElementById('selectObras');
+    const idObra = Number(selectObras.value);
+
+    if(!idObra){
+        alert('Seleccione una obra para eliminar');
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`/obras/${idObra}`, {
+            method: 'DELETE'
+        });
+
+        if(!respuesta.ok){
+            alert('No se pudo eliminar la obra');
+            return;
+        }
+
+        //si eliminamos la obra que estaba abierta, limpia la interfaz
+        if(idObraActual === idObra) {
+            idObraActual = null;
+            document.getElementById('listaElementos').innerHTML = '';
+                document.getElementById('contenidoTotales').innerHTML = '';
+                document.getElementById('mensajeObra').textContent = '';
+        }
+
+        // recarga select para mostrar cambios
+        await cargarObrasGuardadas();
+        alert('Obra eliminada correctamente');
+
+    } catch (error) {
+        console.error('Error al eliminar la obra:', error);
+        alert('Ocurrio un error al intentar eliminar la obra')
+    }
+});
 
 // ========================
 // ABRIR UNA OBRA GUARDADA
 // ========================
 
-async function abrirObra(idObra) {
-
+async function abrirObra(idObra){
     idObraActual = idObra;
 
-
-    document.getElementById('mensajeObra')
-        .textContent =
-        `Obra abierta correctamente. ID: ${idObraActual}`;
-
+    document.getElementById('mensajeObra').textContent = 
+    `Obra abierta correctamente.`;
 
     await cargarElementosObra();
-
     await cargarTotalesObra();
-
 }
 
 // =========================================================
